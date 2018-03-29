@@ -1,4 +1,5 @@
 from concurrent import futures
+import json
 import time
 
 import grpc
@@ -8,11 +9,31 @@ import csi_pb2_grpc
 
 _ONE_DAY_IN_SECONDS = 60 * 60 * 24
 
+AUTH_URL = "http://10.117.36.5:5000/v3"
+USERNAME = "jdg"
+PASSWORD = "password"
+PROJECT_ID = "394337ba489a40678dc6ebf4d4c4af78"
+USER_DOMAIN_NAME = "Default"
+VERSION = "3"
 
 class CinderServicer(csi_pb2_grpc.ControllerServicer):
     """Implements the ControllerServicer."""
     def __init__self():
         pass
+
+
+    def _get_client_session(self):
+        from keystoneauth1 import loading
+        from keystoneauth1 import session
+        from cinderclient import client
+        loader = loading.get_plugin_loader('password')
+        auth = loader.load_from_options(auth_url=AUTH_URL,
+                                        username=USERNAME,
+                                        password=PASSWORD,
+                                        project_id=PROJECT_ID,
+                                        user_domain_name=USER_DOMAIN_NAME)
+        sess = session.Session(auth=auth)
+        return client.Client(VERSION, session=sess)
 
 
     def CreateVolume(self, req, context):
@@ -25,16 +46,18 @@ class CinderServicer(csi_pb2_grpc.ControllerServicer):
         # some details around using "range" etc and the conversion
         # from bytes to GiB
         volume_size_gig = 1
-        volume_type = req.parameters.get('type', None)
+        volume_type_name = req.parameters.get('type', None)
         volume_az = req.parameters.get('availability', None)
 
-        vref = csi_pb2.Volume
-        create_response = csi_pb2.CreateVolumeResponse
+        cc = self._get_client_session()
+        vref = cc.volumes.create(volume_size_gig, name=volume_name, volume_type=volume_type_name)
 
-        # TODO(jdg): Import cinder.volume.api and implement the call here
-        vref.id = "fake-cinder-uuid"
-        create_response.volume = vref
-        return create_response, nil
+        # FIXME(jdg): This is still wrong, it doesn't serialize correctly for a grpc response, but
+        # I haven't figured out what's wrong yet
+        csi_create_response = csi_pb2.CreateVolumeResponse()
+        csi_create_response.volume.id = vref.id
+        csi_create_response.volume.capacity_bytes = 1
+        return csi_create_response
 
 
     def DeleteVolume(self, req, context):
