@@ -61,7 +61,9 @@ class CinderServicer(csi_pb2_grpc.ControllerServicer):
 
 
     def DeleteVolume(self, req, context):
-        pass
+        cc = self._get_client_session()
+        cc.volumes.delete(req.volume_id)
+        return csi_pb2.CreateVolumeResponse()
 
 
     def ControllerPublishVolume(self, req, context):
@@ -77,7 +79,23 @@ class CinderServicer(csi_pb2_grpc.ControllerServicer):
 
 
     def ListVolumes(self, req, context):
-        return csi_pb2.ListVolumesResponse
+        cc = self._get_client_session()
+        vols = cc.volumes.list()
+        list_response = csi_pb2.ListVolumesResponse()
+        volumes = []
+
+        # FIXME(jdg): This is a train wreck down here,
+        # I can't figure out how the heck to get the 
+        # volume elements added to the response.entries
+        elements = []
+        for v in vols:
+            vol = csi_pb2.Volume()
+            vol.capacity_bytes = v.size
+            vol.id = v.id
+            volumes.append(vol)
+
+        # For now we're just returning nada
+        return list_response
 
 
     def GetCapacity(self, req, context):

@@ -28,3 +28,45 @@ This also provides a pattern for creating shims/plugins for other
 things as well.  One thing that's been mentioned is Swordfish, but
 this model could extend to other things like an EBS compat layer
 etc.  
+
+## Test it out
+Not much here, but we can test basic connection to a csi client and 
+the ability to send requests directly out to a running cinder install.
+
+I used the rexray csc tool for this, here's the basic outline to try
+things out:
+
+Update the cloud variables in the csi_server.py file to have the right
+endpoint and credential info for you, then just run the server:
+
+```python ./csi_server.py
+```
+
+You should be greeted with a "now serving..." message when it's ready.  
+Note that we serve up on prot 50051 for now.
+
+Next grab the rexray csc (may be out of date, but good enough for a starting
+point):  https://github.com/rexray/gocsi/tree/master/csc
+
+Make and install the csc tool, then you can start messing around with things:
+
+```csc controller create-volume --cap 5,1 \
+        --log-level=debug \
+        -e tcp://10.117.33.4:50051 \
+        muahuahhuah
+```
+
+Note the example above is specifying use of a tcp socket and the IP specified
+is the IP of the node running the csi_server.
+
+You can also delete the volumes you created by UUID or Name:
+
+```csc controller delete-volume \
+        --log-level=debug \
+        -e tcp://10.117.33.4:50051 \
+        9813254f-d46e-4683-aa0d-998f9dc5fa0c
+```
+
+List is broken, but hey... PR's are WELCOME :)
+
+
