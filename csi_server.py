@@ -31,9 +31,9 @@ class CinderServicer(csi_pb2_grpc.ControllerServicer):
         vref = csi_pb2.Volume
         create_response = csi_pb2.CreateVolumeResponse
 
-        vref.id = cvol.volume_id
+        # TODO(jdg): Import cinder.volume.api and implement the call here
+        vref.id = "fake-cinder-uuid"
         create_response.volume = vref
-        import pdb; pdb.set_trace()
         return create_response, nil
 
 
